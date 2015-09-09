@@ -48,7 +48,7 @@ var tokenize = function(sessionObj){
 };
 
 /**
- * this takes one token key and split it
+ * This takes one token key and split it
  * @param token {string}  raw token string to be processed
  * @return array || null
  */
