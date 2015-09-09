@@ -8,7 +8,16 @@
 var crypto = require('crypto');
 
 // TODO: key will be encrypted and sended to the client 
-var server_key = 'unacadenamuyperoquemuylargo';
+var server_key = ''
+  , method = 'sha256'
+  ;
+
+exports.init=module.exports.init=function(key, hasher){
+  if((key !== null) && (key !== ''))
+    server_key = key;
+  if((hasher !== null) && (hasher !== ''))
+    method = hasher;
+};
 
 /**
  * This method create a hash from a text.
@@ -33,7 +42,8 @@ function hashify(text, method){
  * @param sessionObj json session data to be included in the jwt
  * @return {String}
  */
-var tokenize = function(sessionObj){
+var create = function(sessionObj){
+  console.log('server_key:' + server_key);
   if(! typeof(sessionObj) == 'object'){
     throw Error('sessionObj must be an object');
   }
@@ -94,11 +104,11 @@ var validate = function(token){
     throw Error('Token signature is not valid');
   }
   
-  jheader = new Buffer(subheader, 'base64').toString('ascii');
-  jdata = new Buffer(subdata, 'base64').toString('ascii');
+  var  jheader = new Buffer(subheader, 'base64').toString('ascii');
+  var jdata = new Buffer(subdata, 'base64').toString('ascii');
   return JSON.parse(jdata);
   
 };
 
-exports.tokenize = tokenize;
+exports.create = create;
 exports.validate = validate;
