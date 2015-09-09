@@ -1,26 +1,31 @@
+/**
+ * This modules if for using JSON web tokens within the application
+ * @author Osmay Y. Cruz Alvarez <osmay.cruz@gmail.com>
+ */
 var crypto = require('crypto');
-
-// TODO: the vector is used to encrypt the server key & the rest of the data
-var crypto_vector = 'qwertyuiop[]'; 
 
 // TODO: key will be encrypted and sended to the client 
 var server_key = 'unacadenamuyperoquemuylargo';
 
 /**
- * This method create a hash from a text
+ * This method create a hash from a text.
+ * This is not exported cause is only used inside of the module
+ * 
  * @param text {String} string to be encoded
  * @param method {String} hashing method to be used
  * @return {string}
  */
 function hashify(text, method){
   //TODO: here check is method is a know hashing method
+  if(! method in crypto.getHashes()){
+    throw Error('Invalid hashing method');
+  }
   return crypto.createHash(method).update(text + server_key).digest('hex');
 }
 
 /**
- * this take a json session object encryot it 
- * and send it to the user, the token itself contains
- * all the information required
+ * this method take a json session object sign it 
+ * and send it to the user, the token itself contains all the information required
  * {userId, created, forever, etc[object]}
  * @param sessionObj json session data to be included in the jwt
  * @return {String}
@@ -67,7 +72,6 @@ function split(token){
  * @return {Object || null}
  */
 var validate = function(token){
-  //TODO: implement here
   if(!'string' === typeof token){
     throw Error('The token is not a string');
   }

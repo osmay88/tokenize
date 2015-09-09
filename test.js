@@ -1,5 +1,5 @@
-var tokenize = require('./mio.js').tokenize;
-var validate = require('./mio.js').validate;
+var tokenize = require('./tokenize.js').tokenize;
+var validate = require('./tokenize.js').validate;
 console.log('testing\n');
 
 var session = {
