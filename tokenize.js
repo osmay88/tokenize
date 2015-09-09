@@ -2,6 +2,9 @@
  * This modules if for using JSON web tokens within the application
  * @author Osmay Y. Cruz Alvarez <osmay.cruz@gmail.com>
  */
+
+'use strict';
+
 var crypto = require('crypto');
 
 // TODO: key will be encrypted and sended to the client 
@@ -31,7 +34,6 @@ function hashify(text, method){
  * @return {String}
  */
 var tokenize = function(sessionObj){
-  //TODO: implement here  
   if(! typeof(sessionObj) == 'object'){
     throw Error('sessionObj must be an object');
   }
