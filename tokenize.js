@@ -1,17 +1,24 @@
 /**
  * This modules if for using JSON web tokens within the application
  * @author Osmay Y. Cruz Alvarez <osmay.cruz@gmail.com>
+ * @source https://github.com/osmay88/tokenize
+ * 
  */
 
 'use strict';
 
 var crypto = require('crypto');
 
-// TODO: key will be encrypted and sended to the client 
-var server_key = ''
-  , method = 'sha256'
+var server_key = ''    //server_key is used to generate the token signature
+  , method = 'sha256'  // hashing method used to generate the signature
   ;
 
+/**
+ * Initialize the tokenize middleware
+ * 
+ * @param key {string}  key used to generate the signature
+ * @param hasher {string} hashing algorithm used to generate the signature
+ */
 exports.init=module.exports.init=function(key, hasher){
   if((key !== null) && (key !== ''))
     server_key = key;
@@ -21,7 +28,6 @@ exports.init=module.exports.init=function(key, hasher){
 
 /**
  * This method create a hash from a text.
- * This is not exported cause is only used inside of the module
  * 
  * @param text {String} string to be encoded
  * @param method {String} hashing method to be used
@@ -36,11 +42,10 @@ function hashify(text, method){
 }
 
 /**
- * this method take a json session object sign it 
- * and send it to the user, the token itself contains all the information required
- * {userId, created, forever, etc[object]}
- * @param sessionObj json session data to be included in the jwt
- * @return {String}
+ * Create a JSON web token
+ * 
+ * @param sessionObj {object} json session data to be included in the jwt
+ * @return {string} JSON string token
  */
 var create = function(sessionObj){
   console.log('server_key:' + server_key);
@@ -48,7 +53,7 @@ var create = function(sessionObj){
     throw Error('sessionObj must be an object');
   }
   var header = {
-    'algo': 'sha256',
+    'algo': method,
     'type': 'jwt',
     'created': Date.now()
   }; 
@@ -66,6 +71,7 @@ var create = function(sessionObj){
 
 /**
  * This takes one token key and split it
+ * 
  * @param token {string}  raw token string to be processed
  * @return array || null
  */
@@ -79,8 +85,9 @@ function split(token){
 };
 
 /**
- * Check if a token is valid
- * @param token raw jwt to be validate
+ * Check the validity of the token
+ * 
+ * @param token {string} raw JSON token to be validate
  * @return {Object || null}
  */
 var validate = function(token){
@@ -100,7 +107,6 @@ var validate = function(token){
   // compruebo que la firma del token sea valida, 
   // para evitar tokens manipulados
   if (signature !== hashify(subheader+'.'+subdata, 'sha256')){
-    console.log('Que no cojones...');
     throw Error('Token signature is not valid');
   }
   
