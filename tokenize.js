@@ -1,3 +1,4 @@
+/* global Buffer */
 /**
  * This modules if for using JSON web tokens within the application
  * @author Osmay Y. Cruz Alvarez <osmay.cruz@gmail.com>
@@ -5,12 +6,19 @@
  * 
  */
 
+/**
+ * TODO: Implementar persistencia antes que el servidor se reinicie
+ * 
+ **/
+
 'use strict';
 
 var crypto = require('crypto');
 
-var server_key = ''    //server_key is used to generate the token signature
-  , method = 'sha256'  // hashing method used to generate the signature
+var server_key  = '',    //server_key is used to generate the token signature
+    method 	= 'sha256',  // hashing method used to generate the signature
+    blacklist	= {}, //list containing the blacklisted objects
+    token_life = 5*1000*60;
   ;
 
 /**
@@ -19,11 +27,13 @@ var server_key = ''    //server_key is used to generate the token signature
  * @param key {string}  key used to generate the signature
  * @param hasher {string} hashing algorithm used to generate the signature
  */
-exports.init=module.exports.init=function(key, hasher){
+exports.init=module.exports.init=function(key, hasher, token_time){
   if((key !== null) && (key !== ''))
     server_key = key;
   if((hasher !== null) && (hasher !== ''))
     method = hasher;
+  if(token_time !== null)
+    token_life = token_time
 };
 
 /**
@@ -42,22 +52,71 @@ function hashify(text, method){
 }
 
 /**
+ * Add the user to the blacklist
+ * @param userId {string} user id to add to the blacklist
+ * @param reason {string} Reason why the user is banned
+ */
+var addToBlackList = function(userId, reason, beforethan){
+  if(is_blacklisted(userId)){
+    //the user is already in the black list, just update the fields
+    blacklist[userId].reason = reason;
+    blacklist[userId].beforethan = beforethan;
+    return true;
+  }else{
+    blacklist[userId] = {
+      reason:reason || null,
+      beforethan:beforethan || null
+      
+    };
+  }
+};
+
+/**
+ * Remove the username from the blacklist
+ * 
+ * @param userId {string} User id to be removed
+ */
+var remove_blacklist = function(userId){
+  if(is_blacklisted(userId))  {
+    delete blacklist[userId];
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Check if the user is in the blacklist
+ * 
+ * @param userId {string}
+ * @return {true | false}
+ */
+var is_blacklisted = function(userId){
+  if(blacklist.hasOwnProperty(userId)){
+    return true;
+  }
+  return false;
+};
+
+/**
  * Create a JSON web token
  * 
  * @param sessionObj {object} json session data to be included in the jwt
+ * @param expirein {number} Define for how long this token will be valid(in ms).
+ *                          If no value is provided, then the module setting will be used.
  * @return {string} JSON string token
  */
-var create = function(sessionObj){
-  console.log('server_key:' + server_key);
-  if(! typeof(sessionObj) == 'object'){
+var create = function(sessionObj, expireon){
+  //console.log('server_key:' + server_key);
+  if('object' !== typeof(sessionObj)){
     throw Error('sessionObj must be an object');
   }
   var header = {
     'algo': method,
     'type': 'jwt',
-    'created': Date.now()
+    'created': Date.now(),
+    'expirein': expireon || token_expire
   }; 
-  // convierrto los objetos json en cadenas
+  // convierto los objetos json en cadenas
   var jheader = JSON.stringify(header);
   var jdata = JSON.stringify(sessionObj);
   
@@ -68,6 +127,27 @@ var create = function(sessionObj){
   
   return subkey + '.' + signature;
 };
+
+/**
+ * Create a new token from a previous valid token
+ * 
+ * @param token {string} old token to be updated
+ * @returns newtoken {string|| null}  renew token to send to the user
+ */
+var update = function(token){
+  if(validate(token)){
+    if(!is_blacklisted(token)){
+      // the token is valid so I create a new one
+      var extracted = extract(token);
+      return create(extracted['data']);
+    }else{
+      //TODO: check what to do when the user is in the blacklist or the token is invalid
+      return null; //user in blacklist
+    }
+  }else{
+    return null;
+  }
+}
 
 /**
  * This takes one token key and split it
@@ -85,13 +165,31 @@ function split(token){
 };
 
 /**
+ * Extract the json object whithout validate
+ * 
+ * @param token {string} raw JSON web token
+ * @return Object object containing the json data {header, data, signature}
+ */
+var extract = function(token){
+  if('string' !== typeof token)
+    throw Error('The token object should be a string');
+  var subelements = split(token);
+  var header = subelements[0]
+    , data   = subelements[1]
+    , signature = subelements[2]
+    ;
+  return {'header':header, 'data':data, 'signature':signature}
+  
+}
+
+/**
  * Check the validity of the token
  * 
  * @param token {string} raw JSON token to be validate
  * @return {Object || null}
  */
 var validate = function(token){
-  if(!'string' === typeof token){
+  if('string' !== typeof token){
     throw Error('The token is not a string');
   }
   var subitems = split(token);
@@ -118,3 +216,7 @@ var validate = function(token){
 
 exports.create = create;
 exports.validate = validate;
+exports.extract = extract;
+exports.is_blacklisted = is_blacklisted;
+exports.remove_blacklist = remove_blacklist;
+exports.blacklist = addToBlackList;
