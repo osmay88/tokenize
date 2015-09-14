@@ -18,7 +18,7 @@ var crypto = require('crypto');
 var server_key  = '',    //server_key is used to generate the token signature
     method 	= 'sha256',  // hashing method used to generate the signature
     blacklist	= {}, //list containing the blacklisted objects
-    token_life = 5*1000*60;
+    token_life = 5*1000*60
   ;
 
 /**
@@ -55,6 +55,7 @@ function hashify(text, method){
  * Add the user to the blacklist
  * @param userId {string} user id to add to the blacklist
  * @param reason {string} Reason why the user is banned
+ * @param beforethan {date} all the tokens issued before this date should be banned
  */
 var addToBlackList = function(userId, reason, beforethan){
   if(is_blacklisted(userId)){
@@ -88,20 +89,17 @@ var remove_blacklist = function(userId){
  * Check if the user is in the blacklist
  * 
  * @param userId {string}
- * @return {true | false}
+ * @return {boolean}
  */
 var is_blacklisted = function(userId){
-  if(blacklist.hasOwnProperty(userId)){
-    return true;
-  }
-  return false;
+  return blacklist.hasOwnProperty(userId) ? true : false;
 };
 
 /**
  * Create a JSON web token
  * 
  * @param sessionObj {object} json session data to be included in the jwt
- * @param expirein {number} Define for how long this token will be valid(in ms).
+ * @param expireon {number} Define for how long this token will be valid(in ms).
  *                          If no value is provided, then the module setting will be used.
  * @return {string} JSON string token
  */
@@ -114,7 +112,7 @@ var create = function(sessionObj, expireon){
     'algo': method,
     'type': 'jwt',
     'created': Date.now(),
-    'expirein': expireon || token_expire
+    'expireon': expireon || token_life
   }; 
   // convierto los objetos json en cadenas
   var jheader = JSON.stringify(header);
@@ -130,24 +128,18 @@ var create = function(sessionObj, expireon){
 
 /**
  * Create a new token from a previous valid token
- * 
+ * This method doesnt validate the token..
  * @param token {string} old token to be updated
- * @returns newtoken {string|| null}  renew token to send to the user
  */
 var update = function(token){
-  if(validate(token)){
-    if(!is_blacklisted(token)){
-      // the token is valid so I create a new one
-      var extracted = extract(token);
-      return create(extracted['data']);
-    }else{
-      //TODO: check what to do when the user is in the blacklist or the token is invalid
-      return null; //user in blacklist
-    }
-  }else{
-    return null;
-  }
-}
+  //TODO: la validacion del token debe ser comprobada por el usuario
+  var extracted = extract(token);
+  var strdata = new Buffer(extracted['data'], 'base64').toString('ascii');
+
+  return create(JSON.parse(strdata), extracted.header.expireon); //creo el nuevo token
+
+
+};
 
 /**
  * This takes one token key and split it
@@ -162,7 +154,7 @@ function split(token){
     return null; // this token is not valid
   }
   return subelements;
-};
+}
 
 /**
  * Extract the json object whithout validate
@@ -180,7 +172,7 @@ var extract = function(token){
     ;
   return {'header':header, 'data':data, 'signature':signature}
   
-}
+};
 
 /**
  * Check the validity of the token
@@ -208,7 +200,7 @@ var validate = function(token){
     throw Error('Token signature is not valid');
   }
   
-  var  jheader = new Buffer(subheader, 'base64').toString('ascii');
+  //  jheader = new Buffer(subheader, 'base64').toString('ascii');
   var jdata = new Buffer(subdata, 'base64').toString('ascii');
   return JSON.parse(jdata);
   
@@ -220,3 +212,4 @@ exports.extract = extract;
 exports.is_blacklisted = is_blacklisted;
 exports.remove_blacklist = remove_blacklist;
 exports.blacklist = addToBlackList;
+exports.update = update;
