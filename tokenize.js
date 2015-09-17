@@ -17,7 +17,7 @@ var crypto = require('crypto');
 
 var server_key  = '',    //server_key is used to generate the token signature
     method 	= 'sha256',  // hashing method used to generate the signature
-    blacklist	= {}, //list containing the blacklisted objects
+    //blacklist	= {}, //list containing the blacklisted objects
     token_life = 5*1000*60
   ;
 
@@ -50,50 +50,6 @@ function hashify(text, method){
   }
   return crypto.createHash(method).update(text + server_key).digest('hex');
 }
-
-/**
- * Add the user to the blacklist
- * @param userId {string} user id to add to the blacklist
- * @param reason {string} Reason why the user is banned
- * @param beforethan {date} all the tokens issued before this date should be banned
- */
-var addToBlackList = function(userId, reason, beforethan){
-  if(is_blacklisted(userId)){
-    //the user is already in the black list, just update the fields
-    blacklist[userId].reason = reason;
-    blacklist[userId].beforethan = beforethan;
-    return true;
-  }else{
-    blacklist[userId] = {
-      reason:reason || null,
-      beforethan:beforethan || null
-      
-    };
-  }
-};
-
-/**
- * Remove the username from the blacklist
- * 
- * @param userId {string} User id to be removed
- */
-var remove_blacklist = function(userId){
-  if(is_blacklisted(userId))  {
-    delete blacklist[userId];
-    return true;
-  }
-  return false;
-};
-
-/**
- * Check if the user is in the blacklist
- * 
- * @param userId {string}
- * @return {boolean}
- */
-var is_blacklisted = function(userId){
-  return blacklist.hasOwnProperty(userId) ? true : false;
-};
 
 /**
  * Create a JSON web token
@@ -132,7 +88,7 @@ var create = function(sessionObj, expireon){
  * @param token {string} old token to be updated
  */
 var update = function(token){
-  //TODO: la validacion del token debe ser comprobada por el usuario
+  // La validacion del token debe ser comprobada por el usuario
   var extracted = extract(token);
   var strdata = new Buffer(extracted['data'], 'base64').toString('ascii');
 
@@ -208,15 +164,13 @@ var validate = function(token){
       reason: 'The token signature is not valid'
     };
   }
-  
-  //  jheader = new Buffer(subheader, 'base64').toString('ascii');
-  var data = new Buffer(subdata, 'base64').toString('ascii');
+  var rawheader = new Buffer(subheader, 'base64').toString('ascii')
+    , rawdata = new Buffer(subdata, 'base64').toString('ascii')
+  ;
 
-  // aqui compruebo si el token esta en la lista negra
-  if(is_blacklisted(data.id)){
-    // comprobar porque el usuario esta en la lista
-
-  }
+  var header = JSON.parse(rawheader)
+    , data = JSON.parse(rawdata)
+  ;
 
   return JSON.parse(data);
 };
@@ -224,7 +178,4 @@ var validate = function(token){
 exports.create = create;
 exports.validate = validate;
 exports.extract = extract;
-exports.is_blacklisted = is_blacklisted;
-exports.remove_blacklist = remove_blacklist;
-exports.blacklist = addToBlackList;
 exports.update = update;
