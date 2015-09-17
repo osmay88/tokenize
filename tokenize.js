@@ -178,15 +178,21 @@ var extract = function(token){
  * Check the validity of the token
  * 
  * @param token {string} raw JSON token to be validate
- * @return {Object || null}
+ * @return {Object}
  */
 var validate = function(token){
   if('string' !== typeof token){
-    throw Error('The token is not a string');
+    return {
+      valid: false,
+      reason: 'The token is not a string object'
+    };
   }
   var subitems = split(token);
   if(subitems === null){
-    throw Error('The token is not valid.');
+    return {
+      valid: false,
+      reason: 'The token is not valid'
+    };
   }
   var subheader = subitems[0],
       subdata = subitems[1],
@@ -197,13 +203,22 @@ var validate = function(token){
   // compruebo que la firma del token sea valida, 
   // para evitar tokens manipulados
   if (signature !== hashify(subheader+'.'+subdata, 'sha256')){
-    throw Error('Token signature is not valid');
+    return {
+      valid: false,
+      reason: 'The token signature is not valid'
+    };
   }
   
   //  jheader = new Buffer(subheader, 'base64').toString('ascii');
-  var jdata = new Buffer(subdata, 'base64').toString('ascii');
-  return JSON.parse(jdata);
-  
+  var data = new Buffer(subdata, 'base64').toString('ascii');
+
+  // aqui compruebo si el token esta en la lista negra
+  if(is_blacklisted(data.id)){
+    // comprobar porque el usuario esta en la lista
+
+  }
+
+  return JSON.parse(data);
 };
 
 exports.create = create;
